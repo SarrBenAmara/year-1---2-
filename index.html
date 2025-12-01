@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Bee Game</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    html, body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', cursive, sans-serif;
+      overflow: hidden;
+    }
+/* ⭐ LOGO — added */
+    .page-logo {
+      position: fixed;
+      top: 80px;
+      right: 80px;
+      width: 200px;
+      height: auto;
+      z-index: 999;
+    }
+    .game-container {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #87CEEB 0%, #98D8C8 100%);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meadow-bg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 25%;
+      background: linear-gradient(180deg, transparent 0%, #7EC850 40%, #5FA838 100%);
+      pointer-events: none;
+    }
+
+    .flowers {
+      position: absolute;
+      bottom: 5%;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      pointer-events: none;
+    }
+
+    .flower {
+      font-size: 2em;
+      animation: sway 3s ease-in-out infinite;
+    }
+
+    @keyframes sway {
+      0%, 100% { transform: rotate(-5deg); }
+      50% { transform: rotate(5deg); }
+    }
+
+    .header {
+      text-align: center;
+      padding: 1.5em 1em;
+      z-index: 10;
+    }
+
+    .game-title {
+      font-size: 2em;
+      font-weight: bold;
+      color: #FFA500;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      margin: 0 0 0.3em 0;
+    }
+
+    .score-display {
+      font-size: 1.2em;
+      color: #fff;
+      background: rgba(255, 165, 0, 0.8);
+      padding: 0.5em 1em;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .emoji-area {
+      text-align: center;
+      padding: 1em;
+      z-index: 10;
+    }
+
+    .target-emoji {
+      font-size: 5em;
+      animation: bounce 2s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .instruction {
+      font-size: 1.5em;
+      color: #fff;
+      margin-top: 0.5em;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .word-display {
+      font-size: 3em;
+      color: #FFA500;
+      font-weight: bold;
+      margin-top: 0.3em;
+      letter-spacing: 0.3em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      min-height: 1.2em;
+    }
+
+    .game-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .falling-letter {
+      position: fixed;
+      width: 70px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      font-weight: bold;
+      cursor: default;
+      transition: transform 0.1s;
+      z-index: 15;
+    }
+
+    .bee-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .bee {
+      position: absolute;
+      top: -20px;
+      font-size: 2em;
+      animation: fly 0.3s ease-in-out infinite alternate;
+    }
+
+    @keyframes fly {
+      from { transform: translateY(0); }
+      to { transform: translateY(-5px); }
+    }
+
+    .honey-drop {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #FFD700;
+      border: 3px solid #FFA500;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .letter-text {
+      color: #8B4513;
+      font-size: 1.8em;
+      font-weight: bold;
+    }
+
+    .basket-area {
+      position: absolute;
+      bottom: 15%;
+      left: 0;
+      right: 0;
+      height: 100px;
+      z-index: 20;
+    }
+
+    .basket {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 100px;
+      cursor: grab;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .basket:active {
+      cursor: grabbing;
+    }
+
+    .basket.correct {
+      animation: glow 0.5s;
+    }
+
+    .basket.wrong {
+      animation: shake 0.3s;
+    }
+
+    @keyframes glow {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.5) drop-shadow(0 0 20px #FFD700); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(-50%) rotate(0deg); }
+      25% { transform: translateX(-50%) rotate(-5deg); }
+      75% { transform: translateX(-50%) rotate(5deg); }
+    }
+
+    .honey-pot {
+      font-size: 5em;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+
+    .feedback {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      font-weight: bold;
+      padding: 0.5em 1em;
+      border-radius: 20px;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feedback.show {
+      opacity: 1;
+    }
+
+    .feedback.correct {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .feedback.wrong {
+      background: #FF6B6B;
+      color: white;
+    }
+
+    .completion-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 200;
+    }
+
+    .completion-overlay.show {
+      display: flex;
+      animation: fadeIn 0.5s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .completion-emoji {
+      font-size: 8em;
+      animation: sparkle 1s ease-in-out infinite;
+    }
+
+    @keyframes sparkle {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(5deg); }
+    }
+
+    .completion-word {
+      font-size: 4em;
+      color: #FFA500;
+      font-weight: bold;
+      margin: 0.3em 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .bee-mascot {
+      font-size: 3em;
+      margin: 0.5em 0;
+    }
+
+    .next-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.8em 2em;
+      font-size: 1.5em;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      font-family: inherit;
+      margin-top: 1em;
+    }
+
+    .next-btn:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    .next-btn:active {
+      transform: translateY(0);
+    }
+
+    .difficulty-btn {
+      background: #fff;
+      color: #FFA500;
+      border: 3px solid #FFA500;
+      padding: 0.8em 1.5em;
+      font-size: 1.3em;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: inherit;
+      margin: 0.5em;
+      transition: all 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: block;
+      width: 80%;
+      max-width: 300px;
+    }
+
+    .difficulty-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+      background: #FFA500;
+      color: white;
+    }
+
+    .difficulty-btn.active {
+      background: #FFA500;
+      color: white;
+    }
+
+    .home-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, #87CEEB 0%, #98D8C8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 300;
+    }
+
+    .home-screen.hidden {
+      display: none;
+    }
+
+    .home-content {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2em;
+      border-radius: 30px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .home-title {
+      font-size: 3em;
+      color: #FFA500;
+      margin: 0 0 0.3em 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .home-subtitle {
+      font-size: 1.5em;
+      color: #666;
+      margin-bottom: 1.5em;
+    }
+
+    .name-input-group {
+      margin-bottom: 2em;
+    }
+
+    .name-label {
+      display: block;
+      font-size: 1.3em;
+      color: #333;
+      margin-bottom: 0.5em;
+      font-weight: bold;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 0.8em;
+      font-size: 1.2em;
+      border: 3px solid #FFA500;
+      border-radius: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .name-input:focus {
+      outline: none;
+      border-color: #FF8C00;
+      box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+    }
+
+    .difficulty-section {
+      margin-bottom: 1.5em;
+    }
+
+    .difficulty-title {
+      font-size: 1.5em;
+      color: #333;
+      margin-bottom: 1em;
+      font-weight: bold;
+    }
+
+    .difficulty-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .start-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 1em 3em;
+      font-size: 1.8em;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      font-family: inherit;
+      margin-top: 1em;
+    }
+
+    .start-btn:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    .start-btn:active {
+      transform: translateY(0);
+    }
+
+    .start-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .home-btn {
+      background: #FF6B6B;
+      color: white;
+      border: none;
+      padding: 0.6em 1.2em;
+      font-size: 1em;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      font-family: inherit;
+      margin-left: 1em;
+    }
+
+    .home-btn:hover {
+      background: #FF5252;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .home-btn:active {
+      transform: translateY(0);
+    }
+
+    .player-info {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 0.5em 1em;
+      border-radius: 20px;
+      margin-left: 1em;
+      font-size: 1em;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+ <!-- ⭐ LOGO — added here -->
+  <img src="logo.png" class="page-logo" alt="Logo">
+  <div class="home-screen" id="homeScreen">
+   <div class="home-content">
+    <div class="home-title">
+     🐝 Spelling Bee 🐝
+    </div>
+    <div class="home-subtitle">
+     Learn to spell with fun!
+    </div>
+    <div class="name-input-group"><label class="name-label" for="playerName">What's your name?</label> <input type="text" id="playerName" class="name-input" placeholder="Enter your name">
+    </div>
+    <div class="difficulty-section">
+     <div class="difficulty-title">
+      Choose Difficulty:
+     </div>
+     <div class="difficulty-buttons"><button class="difficulty-btn active" data-level="easy">🐝 Easy</button> <button class="difficulty-btn" data-level="medium">🐝🐝 Medium</button> <button class="difficulty-btn" data-level="hard">🐝🐝🐝 Hard</button>
+     </div>
+    </div><button class="start-btn" id="startGameBtn">Start Game</button>
+   </div>
+  </div>
+  <div class="game-container">
+   <div class="meadow-bg"></div>
+   <div class="flowers"><span class="flower">🌼</span> <span class="flower">🌸</span> <span class="flower">🌺</span> <span class="flower">🌻</span> <span class="flower">🌷</span>
+   </div>
+   <div class="header">
+    <div class="game-title" id="gameTitle">
+     Spelling Bee Game
+    </div>
+    <div><span class="score-display">🍯 Honey Points: <span id="score">0</span></span> <span class="player-info" id="playerInfo">👤 Player</span> <button class="home-btn" id="homeBtn">🏠 Home</button>
+    </div>
+   </div>
+   <div class="emoji-area">
+    <div class="target-emoji" id="targetEmoji">
+     🐱
+    </div>
+    <div class="instruction" id="instructionText">
+     Catch the letters to spell the word!
+    </div>
+    <div class="word-display" id="wordDisplay">
+     _ _ _
+    </div>
+   </div>
+   <div class="game-area" id="gameArea">
+    <div class="basket-area">
+     <div class="basket" id="basket">
+      <div class="honey-pot">
+       🍯
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="feedback" id="feedback"></div>
+   <div class="completion-overlay" id="completionOverlay">
+    <div class="completion-emoji" id="completionEmoji">
+     🐱
+    </div>
+    <div class="completion-word" id="completionWord">
+     cat
+    </div>
+    <div class="bee-mascot">
+     🐝✨
+    </div><button class="next-btn" id="nextBtn">Next Word</button>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "Spelling Bee Game",
+      instruction_text: "Catch the letters to spell the word!",
+      button_text: "Next Word"
+    };
+
+    const wordList = [
+      { word: 'cat', emoji: '🐱' },
+      { word: 'dog', emoji: '🐶' },
+      { word: 'sun', emoji: '☀️' },
+      { word: 'map', emoji: '🗺️' },
+      { word: 'bag', emoji: '🎒' },
+      { word: 'pen', emoji: '🖊️' },
+      { word: 'fan', emoji: '🪭' },
+      { word: 'cup', emoji: '☕' },
+      { word: 'bed', emoji: '🛏️' },
+      { word: 'hat', emoji: '🎩' },
+      { word: 'pig', emoji: '🐷' },
+      { word: 'fox', emoji: '🦊' },
+      { word: 'red', emoji: '🔴' },
+      { word: 'top', emoji: '🔝' },
+      { word: 'box', emoji: '📦' },
+      { word: 'bus', emoji: '🚌' }
+    ];
+
+    let currentWordIndex = 0;
+    let currentLetterIndex = 0;
+    let score = 0;
+    let collectedLetters = [];
+    let fallingLetters = [];
+    let gameActive = false;
+    let basketX = 0;
+    let isDragging = false;
+    let difficulty = 'easy';
+    let dropInterval = null;
+    let playerName = '';
+
+    const homeScreen = document.getElementById('homeScreen');
+    const playerNameInput = document.getElementById('playerName');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const homeBtn = document.getElementById('homeBtn');
+    const playerInfo = document.getElementById('playerInfo');
+    const gameArea = document.getElementById('gameArea');
+    const basket = document.getElementById('basket');
+    const targetEmoji = document.getElementById('targetEmoji');
+    const wordDisplay = document.getElementById('wordDisplay');
+    const scoreDisplay = document.getElementById('score');
+    const feedback = document.getElementById('feedback');
+    const completionOverlay = document.getElementById('completionOverlay');
+    const completionEmoji = document.getElementById('completionEmoji');
+    const completionWord = document.getElementById('completionWord');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function getCurrentWord() {
+      return wordList[currentWordIndex];
+    }
+
+    function startNewWord() {
+      const wordData = getCurrentWord();
+      currentLetterIndex = 0;
+      collectedLetters = [];
+      gameActive = true;
+
+      if (dropInterval) {
+        clearTimeout(dropInterval);
+      }
+
+      targetEmoji.textContent = wordData.emoji;
+      updateWordDisplay();
+      completionOverlay.classList.remove('show');
+
+      fallingLetters.forEach(letter => letter.element.remove());
+      fallingLetters = [];
+
+      setTimeout(() => dropNextLetter(), 1000);
+    }
+
+    function updateWordDisplay() {
+      const wordData = getCurrentWord();
+      const displayWord = wordData.word.split('').map((letter, idx) => {
+        return idx < collectedLetters.length ? collectedLetters[idx] : '_';
+      }).join(' ');
+      wordDisplay.textContent = displayWord;
+    }
+
+    function getDifficultySettings() {
+      switch(difficulty) {
+        case 'easy':
+          return { distractors: 2, speed: 1.2, interval: 3000 };
+        case 'medium':
+          return { distractors: 3, speed: 1.8, interval: 2500 };
+        case 'hard':
+          return { distractors: 4, speed: 2.5, interval: 2000 };
+        default:
+          return { distractors: 2, speed: 1.2, interval: 3000 };
+      }
+    }
+
+    function getDistractorLetters(correctLetter, count) {
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+      const distractors = [];
+      while (distractors.length < count) {
+        const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+        if (randomLetter !== correctLetter && !distractors.includes(randomLetter)) {
+          distractors.push(randomLetter);
+        }
+      }
+      return distractors;
+    }
+
+    function dropNextLetter() {
+      if (!gameActive) return;
+
+      const wordData = getCurrentWord();
+      const correctLetter = wordData.word[currentLetterIndex];
+      const settings = getDifficultySettings();
+      const distractors = getDistractorLetters(correctLetter, settings.distractors);
+      const allLetters = [correctLetter, ...distractors];
+
+      allLetters.sort(() => Math.random() - 0.5);
+
+      allLetters.forEach((letter, idx) => {
+        const startX = (idx + 1) * (window.innerWidth / (allLetters.length + 1));
+        setTimeout(() => {
+          if (gameActive) {
+            createFallingLetter(letter, startX, letter === correctLetter);
+          }
+        }, idx * 600);
+      });
+
+      dropInterval = setTimeout(() => {
+        if (gameActive) {
+          dropNextLetter();
+        }
+      }, settings.interval);
+    }
+
+    function createFallingLetter(letter, startX, isCorrect) {
+      const letterDiv = document.createElement('div');
+      letterDiv.className = 'falling-letter';
+      letterDiv.style.left = startX + 'px';
+      letterDiv.style.top = '-100px';
+      letterDiv.style.cursor = 'pointer';
+
+      letterDiv.innerHTML = `
+        <div class="bee-container">
+          <div class="bee">🐝</div>
+          <div class="honey-drop">
+            <div class="letter-text">${letter}</div>
+          </div>
+        </div>
+      `;
+
+      const settings = getDifficultySettings();
+      const letterObj = {
+        element: letterDiv,
+        letter: letter,
+        isCorrect: isCorrect,
+        x: startX,
+        y: -100,
+        speed: settings.speed + Math.random() * 0.3
+      };
+
+      letterDiv.addEventListener('click', () => {
+        handleLetterCatch(letterObj);
+        letterDiv.remove();
+        const index = fallingLetters.indexOf(letterObj);
+        if (index > -1) {
+          fallingLetters.splice(index, 1);
+        }
+      });
+
+      gameArea.appendChild(letterDiv);
+      fallingLetters.push(letterObj);
+    }
+
+    function updateGame() {
+      const basketRect = basket.getBoundingClientRect();
+      const basketCenterX = basketRect.left + basketRect.width / 2;
+      const basketY = basketRect.top;
+
+      fallingLetters = fallingLetters.filter(letterObj => {
+        letterObj.y += letterObj.speed;
+        letterObj.element.style.top = letterObj.y + 'px';
+
+        const letterRect = letterObj.element.getBoundingClientRect();
+        const letterCenterX = letterRect.left + letterRect.width / 2;
+        const letterBottomY = letterRect.bottom;
+
+        if (letterBottomY >= basketY && 
+            letterBottomY <= basketY + 80 &&
+            Math.abs(letterCenterX - basketCenterX) < 80) {
+          
+          handleLetterCatch(letterObj);
+          letterObj.element.remove();
+          return false;
+        }
+
+        if (letterObj.y > window.innerHeight) {
+          letterObj.element.remove();
+          return false;
+        }
+
+        return true;
+      });
+
+      requestAnimationFrame(updateGame);
+    }
+
+    function handleLetterCatch(letterObj) {
+      const wordData = getCurrentWord();
+      const expectedLetter = wordData.word[currentLetterIndex];
+      
+      if (letterObj.letter === expectedLetter) {
+        collectedLetters.push(letterObj.letter);
+        currentLetterIndex++;
+        updateWordDisplay();
+
+        basket.classList.add('correct');
+        setTimeout(() => basket.classList.remove('correct'), 500);
+
+        showFeedback('Great catch! 🐝', 'correct');
+        score += 10;
+        scoreDisplay.textContent = score;
+
+        if (currentLetterIndex >= wordData.word.length) {
+          completeWord();
+        }
+      } else {
+        basket.classList.add('wrong');
+        setTimeout(() => basket.classList.remove('wrong'), 300);
+        showFeedback('Try again! 💛', 'wrong');
+      }
+    }
+
+    function showFeedback(message, type) {
+      feedback.textContent = message;
+      feedback.className = `feedback ${type} show`;
+      setTimeout(() => {
+        feedback.classList.remove('show');
+      }, 1500);
+    }
+
+    function completeWord() {
+      gameActive = false;
+      const wordData = getCurrentWord();
+
+      setTimeout(() => {
+        completionEmoji.textContent = wordData.emoji;
+        completionWord.textContent = wordData.word;
+        completionOverlay.classList.add('show');
+        score += 50;
+        scoreDisplay.textContent = score;
+      }, 800);
+    }
+
+    nextBtn.addEventListener('click', () => {
+      currentWordIndex = (currentWordIndex + 1) % wordList.length;
+      startNewWord();
+    });
+
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        difficulty = btn.dataset.level;
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    startGameBtn.addEventListener('click', () => {
+      playerName = playerNameInput.value.trim();
+      if (playerName) {
+        playerInfo.textContent = '👤 ' + playerName;
+        homeScreen.classList.add('hidden');
+        currentWordIndex = 0;
+        score = 0;
+        scoreDisplay.textContent = score;
+        startNewWord();
+      }
+    });
+
+    homeBtn.addEventListener('click', () => {
+      gameActive = false;
+      if (dropInterval) {
+        clearTimeout(dropInterval);
+      }
+      fallingLetters.forEach(letter => letter.element.remove());
+      fallingLetters = [];
+      completionOverlay.classList.remove('show');
+      homeScreen.classList.remove('hidden');
+    });
+
+    playerNameInput.addEventListener('input', () => {
+      startGameBtn.disabled = playerNameInput.value.trim() === '';
+    });
+
+    function handleBasketMove(clientX) {
+      const gameRect = gameArea.getBoundingClientRect();
+      const minX = 60;
+      const maxX = gameRect.width - 60;
+      basketX = Math.max(minX, Math.min(maxX, clientX - gameRect.left));
+      basket.style.left = basketX + 'px';
+    }
+
+    basket.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        handleBasketMove(e.clientX);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    basket.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (isDragging && e.touches.length > 0) {
+        handleBasketMove(e.touches[0].clientX);
+      }
+    });
+
+    document.addEventListener('touchend', () => {
+      isDragging = false;
+    });
+
+    async function onConfigChange(config) {
+      const gameTitle = document.getElementById('gameTitle');
+      const instructionText = document.getElementById('instructionText');
+      const nextBtnText = document.getElementById('nextBtn');
+
+      gameTitle.textContent = config.game_title || defaultConfig.game_title;
+      instructionText.textContent = config.instruction_text || defaultConfig.instruction_text;
+      nextBtnText.textContent = config.button_text || defaultConfig.button_text;
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['game_title', config.game_title || defaultConfig.game_title],
+          ['instruction_text', config.instruction_text || defaultConfig.instruction_text],
+          ['button_text', config.button_text || defaultConfig.button_text]
+        ])
+      });
+    }
+
+    startGameBtn.disabled = true;
+    requestAnimationFrame(updateGame);
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a71825ca1b94bef',t:'MTc2NDU4MDgzMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
